@@ -185,7 +185,7 @@ func (c *cache) List() []Item {
 	size := c.incr
 	c.mu.Unlock()
 
-	it := make([]Item, size)
+	it := make([]Item, 0, size)
 	for _, v := range items {
 		it = append(it, v)
 	}

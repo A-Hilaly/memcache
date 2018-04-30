@@ -292,8 +292,8 @@ func Test_cache_Update(t *testing.T) {
 
 func Test_cache_Patch(t *testing.T) {
 	c := debugCache()
-	c.Put("10__one", 10, 2, 3)
-	c.Put("10__two", true, 2)
+	c.Put("test-1", 10, 2, 3)
+	c.Put("test-2", true, 2)
 	type args struct {
 		key   string
 		value interface{}
@@ -308,7 +308,7 @@ func Test_cache_Patch(t *testing.T) {
 			name:   "patch non existing item",
 			fields: c,
 			args: args{
-				key:   "10__three",
+				key:   "test-1",
 				value: 333,
 			},
 		},
@@ -316,7 +316,7 @@ func Test_cache_Patch(t *testing.T) {
 			name:   "patch existing item",
 			fields: c,
 			args: args{
-				key:   "10__two",
+				key:   "test-2",
 				value: 777,
 			},
 		},
@@ -333,8 +333,11 @@ func Test_cache_Patch(t *testing.T) {
 
 func Test_cache_Delete(t *testing.T) {
 	c := debugCache()
-	c.Put("10__one", 10, 2, 3)
-	c.Put("10__two", true, 2)
+	c.Put("test-1", 10, 2, 3)
+	c.Put("test-2", true, 2)
+	c.Put("test-3", true, 2)
+	c.Put("test-4", true, 2)
+
 	type args struct {
 		key string
 	}
@@ -344,7 +347,38 @@ func Test_cache_Delete(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-	// TODO: Add test cases.
+		{
+			name:   "delete existing item",
+			fields: c,
+			args: args{
+				key: "test-1",
+			},
+			wantErr: false,
+		},
+		{
+			name:   "delete existing item",
+			fields: c,
+			args: args{
+				key: "test-2",
+			},
+			wantErr: false,
+		},
+		{
+			name:   "delete deleted item",
+			fields: c,
+			args: args{
+				key: "test-2",
+			},
+			wantErr: true,
+		},
+		{
+			name:   "delete deleted item",
+			fields: c,
+			args: args{
+				key: "test-000",
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -352,103 +386,95 @@ func Test_cache_Delete(t *testing.T) {
 			if err := c.Delete(tt.args.key); (err != nil) != tt.wantErr {
 				t.Errorf("cache.Delete() error = %v, wantErr %v", err, tt.wantErr)
 			}
+			if c.(*cache).haveKey(tt.args.key) {
+				t.Errorf("cache.Delete() error = Item not deleted key = %v", tt.args.key)
+			}
 		})
 	}
 }
 
 func Test_cache_Clear(t *testing.T) {
-	type fields struct {
-		mu        sync.Mutex
-		capacity  uint64
-		incr      uint64
-		items     map[string]Item
-		defaultlt time.Duration
-		auditor   Auditor
-	}
+	//NOTE: Lesson learned NEVER IGNORE A TEST
+	c := debugCache()
+	c.Put("test-1", 10, 2, 3)
+	c.Put("test-2", true, 2)
+	c.Put("test-3", true, 2)
+	c.Put("test-4", true, 2)
+
 	tests := []struct {
-		name   string
-		fields fields
+		name string
 	}{
-	// TODO: Add test cases.
+		{
+			name: "clear :)",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &cache{
-				mu:        tt.fields.mu,
-				capacity:  tt.fields.capacity,
-				incr:      tt.fields.incr,
-				items:     tt.fields.items,
-				defaultlt: tt.fields.defaultlt,
-				auditor:   tt.fields.auditor,
-			}
+
 			c.Clear()
+			if l := len(c.(*cache).items); l != 0 {
+				t.Errorf("cache.Clear() cache not cleared, item size = %v", l)
+			}
 		})
 	}
 }
 
 func Test_cache_List(t *testing.T) {
-	type fields struct {
-		mu        sync.Mutex
-		capacity  uint64
-		incr      uint64
-		items     map[string]Item
-		defaultlt time.Duration
-		auditor   Auditor
-	}
+	c := debugCache()
+	c.Put("test-1", 10, 2, 3)
+	c.Put("test-2", true, 2)
+	c.Put("test-3", true, 2)
+	c.Put("test-4", true, 2)
+	size := 4
+
 	tests := []struct {
 		name   string
-		fields fields
+		fields CacheStore
 		want   []Item
 	}{
-	// TODO: Add test cases.
+		{
+			name:   "test list",
+			fields: c,
+		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &cache{
-				mu:        tt.fields.mu,
-				capacity:  tt.fields.capacity,
-				incr:      tt.fields.incr,
-				items:     tt.fields.items,
-				defaultlt: tt.fields.defaultlt,
-				auditor:   tt.fields.auditor,
-			}
-			if got := c.List(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("cache.List() = %v, want %v", got, tt.want)
+			if got := c.List(); len(got) != size {
+				t.Errorf("cache.List() error size = %v", len(got))
 			}
 		})
 	}
 }
 
 func Test_cache_Filter(t *testing.T) {
-	type fields struct {
-		mu        sync.Mutex
-		capacity  uint64
-		incr      uint64
-		items     map[string]Item
-		defaultlt time.Duration
-		auditor   Auditor
-	}
+	c := debugCache()
+	c.Put("test-1", 10, 2, 3)
+	c.Put("test-2", true, 2)
+	c.Put("test-3", true, 2)
+	c.Put("test-4", true, 2)
+
 	type args struct {
 		f func(i Item) bool
 	}
 	tests := []struct {
 		name   string
-		fields fields
+		fields CacheStore
 		args   args
 		want   []Item
 	}{
-	// TODO: Add test cases.
+		{
+			name:   "one-filter",
+			fields: c,
+			args: args{
+				f: func(i Item) bool {
+					return i.Value == true
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &cache{
-				mu:        tt.fields.mu,
-				capacity:  tt.fields.capacity,
-				incr:      tt.fields.incr,
-				items:     tt.fields.items,
-				defaultlt: tt.fields.defaultlt,
-				auditor:   tt.fields.auditor,
-			}
 			if got := c.Filter(tt.args.f); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("cache.Filter() = %v, want %v", got, tt.want)
 			}
