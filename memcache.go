@@ -2,7 +2,6 @@ package memcache
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 )
@@ -20,28 +19,22 @@ type Item struct {
 	Tags      []uint16
 }
 
-type DataStore interface {
-	Start()
-	Stop()
-
+type CacheStore interface {
+	Auditor() Auditor
 	Put(key string, value interface{}, tags ...uint16) error
-	Get(key string) (Item, error)
-
-	Update(key string, f func(i Item)) error
-	Patch(i Item)
-
+	Get(key string) (interface{}, error)
+	GetItem(key string) (Item, error)
+	Update(key string, v interface{}, tags ...uint16) error
+	Patch(key string, value interface{}, tags ...uint16) error
 	Delete(key string) error
-	ClearAll()
-
+	Clear()
 	List() []Item
-	Filter(func(key string, i Item) bool) []Item
-	ForEach(func())
-
+	Filter(func(i Item) bool) []Item
+	ForEach(func(i Item))
 	ListKeys() []string
 	ListValues() []interface{}
-
-	ExtendLifetime(key string, dur time.Duration)
-	SetImmortal(key string)
+	ExtendLifetime(key string, dur time.Duration) error
+	Immortalize(key string) error
 }
 
 type cache struct {
@@ -50,35 +43,34 @@ type cache struct {
 	incr      uint64
 	items     map[string]Item
 	defaultlt time.Duration
-	handler   *cacheHandler
+	auditor   Auditor
 }
 
-func New(capacity uint64, defaultLifetime time.Duration, handler *cacheHandler) *cache {
-	return &cache{
+func New(capacity uint64, defaultLifetime, interval, delay time.Duration) CacheStore {
+	c := &cache{
 		capacity:  capacity,
 		defaultlt: defaultLifetime,
 		items:     make(map[string]Item, capacity),
-		handler:   handler,
+		auditor:   lifetimeAuditor(interval, delay),
 	}
+	c.start()
+	return c
 }
 
-func Default() *cache {
-	return New(10, 5*time.Second, NewLifetimeHandler(2))
+func Default() CacheStore {
+	return New(10, 5*time.Second, 5*time.Second, 500*time.Millisecond)
 }
 
-func Debug() *cache {
-	return New(10, 500*time.Millisecond, NewLifetimeHandler(400*time.Millisecond))
+func (c *cache) Auditor() Auditor {
+	return c.auditor
 }
 
-func (c *cache) Start() {
-	c.handler.Start(c)
-	c.handler.HandleErrors(func(err error) {
-		fmt.Println(err.Error())
-	})
+func (c *cache) start() {
+	c.auditor.Start(c)
 }
 
 func (c *cache) Stop() {
-	c.handler.Stop()
+	c.auditor.Stop()
 }
 
 func (c *cache) haveKey(key string) bool {
@@ -127,24 +119,37 @@ func (c *cache) GetItem(key string) (Item, error) {
 	return v, nil
 }
 
-func (c *cache) Update(key string, value interface{}) error {
+func (c *cache) Update(key string, value interface{}, tags ...uint16) error {
 	if exist := c.haveKey(key); !exist {
 		return ErrKeyDoesntExist
 	}
 
 	c.mu.Lock()
 	v := c.items[key]
-	c.items[key] = Item{
-		createdAt: v.createdAt,
-		Value:     value,
-		Tags:      v.Tags,
-		lifetime:  v.lifetime,
+	if len(tags) == 0 {
+		c.items[key] = Item{
+			createdAt: v.createdAt,
+			Value:     value,
+			Tags:      v.Tags,
+			lifetime:  v.lifetime,
+		}
+	} else {
+		c.items[key] = Item{
+			createdAt: v.createdAt,
+			Value:     value,
+			Tags:      tags,
+			lifetime:  v.lifetime,
+		}
 	}
+
 	c.mu.Unlock()
 	return nil
 }
 
-func (c *cache) Patch(key string, value interface{}, tags ...uint16) {
+func (c *cache) Patch(key string, value interface{}, tags ...uint16) error {
+	if c.haveKey(key) {
+		return c.Update(key, value, tags...)
+	}
 	c.mu.Lock()
 	c.items[key] = Item{
 		createdAt: time.Now(),
@@ -152,6 +157,7 @@ func (c *cache) Patch(key string, value interface{}, tags ...uint16) {
 		Tags:      tags,
 	}
 	c.mu.Unlock()
+	return nil
 }
 
 func (c *cache) Delete(key string) error {
