@@ -452,7 +452,7 @@ func Test_cache_Filter(t *testing.T) {
 	c.Put("test-1", 10, 2, 3)
 	c.Put("test-2", true, 2)
 	c.Put("test-3", true, 2)
-	c.Put("test-4", true, 2)
+	c.Put("test-4", true, 2, 3)
 
 	type args struct {
 		f func(i Item) bool
@@ -475,74 +475,75 @@ func Test_cache_Filter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := c.Filter(tt.args.f); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("cache.Filter() = %v, want %v", got, tt.want)
+			if got := c.Filter(tt.args.f); len(got) != 3 {
+				t.Errorf("cache.Filter() = got %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
 func Test_cache_ForEach(t *testing.T) {
-	type fields struct {
-		mu        sync.Mutex
-		capacity  uint64
-		incr      uint64
-		items     map[string]Item
-		defaultlt time.Duration
-		auditor   Auditor
-	}
+	c := debugCache()
+	c.Put("test-1", 10, 2, 3)
+	c.Put("test-2", true, 2)
+	c.Put("test-3", true, 2)
+	c.Put("test-4", true, 2, 3)
+
+	incr := 0
+
 	type args struct {
 		f func(i Item)
 	}
 	tests := []struct {
 		name   string
-		fields fields
+		fields CacheStore
 		args   args
 	}{
-	// TODO: Add test cases.
+		{
+			name:   "for-each incr",
+			fields: c,
+			args: args{
+				f: func(i Item) {
+					incr++
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &cache{
-				mu:        tt.fields.mu,
-				capacity:  tt.fields.capacity,
-				incr:      tt.fields.incr,
-				items:     tt.fields.items,
-				defaultlt: tt.fields.defaultlt,
-				auditor:   tt.fields.auditor,
-			}
 			c.ForEach(tt.args.f)
+			if incr != 4 {
+				t.Errorf("cache.ForEach() = got %v, want %v", incr, 4)
+			}
 		})
 	}
 }
 
 func Test_cache_ListValues(t *testing.T) {
-	type fields struct {
-		mu        sync.Mutex
-		capacity  uint64
-		incr      uint64
-		items     map[string]Item
-		defaultlt time.Duration
-		auditor   Auditor
-	}
+	c := debugCache()
+	c2 := debugCache()
+	c.Put("test-1", 10, 2, 3)
+
 	tests := []struct {
 		name   string
-		fields fields
+		fields CacheStore
 		want   []interface{}
 	}{
-	// TODO: Add test cases.
+		{
+			name:   "list empty",
+			fields: c2,
+			want:   []interface{}{},
+		},
+		{
+			name:   "list non empty",
+			fields: c,
+			want:   []interface{}{10},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &cache{
-				mu:        tt.fields.mu,
-				capacity:  tt.fields.capacity,
-				incr:      tt.fields.incr,
-				items:     tt.fields.items,
-				defaultlt: tt.fields.defaultlt,
-				auditor:   tt.fields.auditor,
-			}
-			if got := c.ListValues(); !reflect.DeepEqual(got, tt.want) {
+
+			if got := tt.fields.ListValues(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("cache.ListValues() = %v, want %v", got, tt.want)
 			}
 		})
@@ -550,32 +551,30 @@ func Test_cache_ListValues(t *testing.T) {
 }
 
 func Test_cache_ListKeys(t *testing.T) {
-	type fields struct {
-		mu        sync.Mutex
-		capacity  uint64
-		incr      uint64
-		items     map[string]Item
-		defaultlt time.Duration
-		auditor   Auditor
-	}
+	c := debugCache()
+	c2 := debugCache()
+	c.Put("test-1", 10, 2, 3)
+
 	tests := []struct {
 		name   string
-		fields fields
+		fields CacheStore
 		want   []string
 	}{
-	// TODO: Add test cases.
+		{
+			name:   "list empty",
+			fields: c2,
+			want:   []string{},
+		},
+		{
+			name:   "list non empty",
+			fields: c,
+			want:   []string{"test-1"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &cache{
-				mu:        tt.fields.mu,
-				capacity:  tt.fields.capacity,
-				incr:      tt.fields.incr,
-				items:     tt.fields.items,
-				defaultlt: tt.fields.defaultlt,
-				auditor:   tt.fields.auditor,
-			}
-			if got := c.ListKeys(); !reflect.DeepEqual(got, tt.want) {
+
+			if got := tt.fields.ListKeys(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("cache.ListKeys() = %v, want %v", got, tt.want)
 			}
 		})
@@ -583,36 +582,49 @@ func Test_cache_ListKeys(t *testing.T) {
 }
 
 func Test_cache_ExtendLifetime(t *testing.T) {
-	type fields struct {
-		mu        sync.Mutex
-		capacity  uint64
-		incr      uint64
-		items     map[string]Item
-		defaultlt time.Duration
-		auditor   Auditor
-	}
+	c := debugCache()
+	c.Put("test-1", 10, 2, 3)
+
 	type args struct {
 		key string
 		dur time.Duration
 	}
 	tests := []struct {
 		name    string
-		fields  fields
+		fields  CacheStore
 		args    args
 		wantErr bool
 	}{
-	// TODO: Add test cases.
+		{
+			name:   "extend with 0",
+			fields: c,
+			args: args{
+				key: "test-1",
+				dur: 0,
+			},
+			wantErr: false,
+		},
+		{
+			name:   "extend with >0",
+			fields: c,
+			args: args{
+				key: "test-1",
+				dur: 3 * time.Hour,
+			},
+			wantErr: false,
+		},
+		{
+			name:   "extend non existing key",
+			fields: c,
+			args: args{
+				key: "test-non-exist",
+				dur: 1 * time.Hour,
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &cache{
-				mu:        tt.fields.mu,
-				capacity:  tt.fields.capacity,
-				incr:      tt.fields.incr,
-				items:     tt.fields.items,
-				defaultlt: tt.fields.defaultlt,
-				auditor:   tt.fields.auditor,
-			}
 			if err := c.ExtendLifetime(tt.args.key, tt.args.dur); (err != nil) != tt.wantErr {
 				t.Errorf("cache.ExtendLifetime() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -621,35 +633,38 @@ func Test_cache_ExtendLifetime(t *testing.T) {
 }
 
 func Test_cache_Immortalize(t *testing.T) {
-	type fields struct {
-		mu        sync.Mutex
-		capacity  uint64
-		incr      uint64
-		items     map[string]Item
-		defaultlt time.Duration
-		auditor   Auditor
-	}
+	c := debugCache()
+	c.Put("test-1", 10, 2, 3)
+
 	type args struct {
 		key string
 	}
 	tests := []struct {
 		name    string
-		fields  fields
+		fields  CacheStore
 		args    args
 		wantErr bool
 	}{
-	// TODO: Add test cases.
+		{
+			name:   "extend with 0",
+			fields: c,
+			args: args{
+				key: "test-1",
+			},
+			wantErr: false,
+		},
+		{
+			name:   "extend non existing key",
+			fields: c,
+			args: args{
+				key: "test-non-exist",
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &cache{
-				mu:        tt.fields.mu,
-				capacity:  tt.fields.capacity,
-				incr:      tt.fields.incr,
-				items:     tt.fields.items,
-				defaultlt: tt.fields.defaultlt,
-				auditor:   tt.fields.auditor,
-			}
+
 			if err := c.Immortalize(tt.args.key); (err != nil) != tt.wantErr {
 				t.Errorf("cache.Immortalize() error = %v, wantErr %v", err, tt.wantErr)
 			}

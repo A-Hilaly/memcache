@@ -20,7 +20,7 @@ type cacheAuditor struct {
 }
 
 func (ch *cacheAuditor) Start(c *cache) {
-	stop := make(chan struct{}, 2)
+	stop := make(chan struct{}, 1)
 	errchan := make(chan error)
 	ticker := time.NewTicker(ch.interval)
 
