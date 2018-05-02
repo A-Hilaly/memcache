@@ -19,61 +19,6 @@ type cacheAuditor struct {
 	errChan  chan error
 }
 
-func (ch *cacheAuditor) Start(c *cache) {
-	stop := make(chan struct{}, 1)
-	errchan := make(chan error)
-	ticker := time.NewTicker(ch.interval)
-
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				err := ch.job(c)
-				if err != nil {
-					errchan <- err
-				}
-			case <-stop:
-				ticker.Stop()
-				return
-			default:
-				time.Sleep(ch.delay)
-			}
-		}
-	}()
-
-	ch.errChan = errchan
-	ch.stopChan = stop
-}
-
-func (ch *cacheAuditor) Stop() {
-	ch.stopChan <- struct{}{}
-}
-
-func (ch *cacheAuditor) CollectErrors(max int) (errs []error) {
-	errs = make([]error, 0, 100)
-	func() {
-		for {
-			select {
-			case e := <-ch.errChan:
-				errs = append(errs, e)
-				if len(errs) == max {
-					return
-				}
-				continue
-			case <-ch.stopChan:
-				return
-			default:
-				return
-			}
-		}
-	}()
-	return errs
-}
-
-func (ch *cacheAuditor) Chans() (chan struct{}, chan error) {
-	return ch.stopChan, ch.errChan
-}
-
 func lifetimeAuditor(interval time.Duration, delay time.Duration) *cacheAuditor {
 	return &cacheAuditor{
 		interval: interval,
@@ -94,4 +39,57 @@ func lifetimeAuditor(interval time.Duration, delay time.Duration) *cacheAuditor 
 			return nil
 		},
 	}
+}
+
+func (ch *cacheAuditor) Start(c *cache) {
+	stop := make(chan struct{})
+	errchan := make(chan error, 100)
+	ticker := time.NewTicker(ch.interval)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				err := ch.job(c)
+				if err != nil {
+					errchan <- err
+				}
+			case <-ch.stopChan:
+				ticker.Stop()
+				return
+			default:
+				time.Sleep(ch.delay)
+			}
+		}
+	}()
+	ch.errChan = errchan
+	ch.stopChan = stop
+}
+
+func (ch *cacheAuditor) Stop() {
+	ch.stopChan <- struct{}{}
+}
+
+func (ch *cacheAuditor) CollectErrors(max int) (errs []error) {
+	errs = make([]error, 0, max)
+	func() {
+		for i := 0; i < max; i++ {
+			select {
+			case e := <-ch.errChan:
+				errs = append(errs, e)
+				if len(errs) > max {
+					return
+				}
+				continue
+			case <-ch.stopChan:
+				break
+			default:
+				return
+			}
+		}
+	}()
+	return errs
+}
+
+func (ch *cacheAuditor) Chans() (chan struct{}, chan error) {
+	return ch.stopChan, ch.errChan
 }

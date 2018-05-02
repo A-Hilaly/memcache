@@ -19,6 +19,15 @@ type Item struct {
 	Tags      []uint16
 }
 
+type cache struct {
+	mu        sync.Mutex
+	capacity  uint64
+	incr      uint64
+	items     map[string]Item
+	defaultlt time.Duration
+	auditor   Auditor
+}
+
 type CacheStore interface {
 	Auditor() Auditor
 	Put(key string, value interface{}, tags ...uint16) error
@@ -37,16 +46,7 @@ type CacheStore interface {
 	Immortalize(key string) error
 }
 
-type cache struct {
-	mu        sync.Mutex
-	capacity  uint64
-	incr      uint64
-	items     map[string]Item
-	defaultlt time.Duration
-	auditor   Auditor
-}
-
-func New(capacity uint64, defaultLifetime, interval, delay time.Duration) CacheStore {
+func NewCacheStore(capacity uint64, defaultLifetime, interval, delay time.Duration) CacheStore {
 	c := &cache{
 		capacity:  capacity,
 		defaultlt: defaultLifetime,
@@ -58,7 +58,7 @@ func New(capacity uint64, defaultLifetime, interval, delay time.Duration) CacheS
 }
 
 func Default() CacheStore {
-	return New(10, 5*time.Second, 5*time.Second, 500*time.Millisecond)
+	return NewCacheStore(10, 180*time.Second, 30*time.Second, 15*time.Second)
 }
 
 func (c *cache) Auditor() Auditor {

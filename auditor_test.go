@@ -2,8 +2,6 @@ package memcache
 
 import (
 	"errors"
-	"fmt"
-	"reflect"
 	"testing"
 	"time"
 )
@@ -40,7 +38,7 @@ func debugAuditorLight(job func(c *cache) error) Auditor {
 	}
 }
 
-func Test_cacheAuditor_Start(t *testing.T) {
+func Test_cacheAuditor_StartJob(t *testing.T) {
 	incr := 0
 
 	auditDefault := debugAuditorDefault(func(c *cache) error {
@@ -49,6 +47,7 @@ func Test_cacheAuditor_Start(t *testing.T) {
 	})
 	auditThirsty := debugAuditorThirsty(func(c *cache) error {
 		incr++
+
 		return nil
 	})
 	auditLight := debugAuditorLight(func(c *cache) error {
@@ -83,7 +82,6 @@ func Test_cacheAuditor_Start(t *testing.T) {
 			tt.fields.Start(nil)
 			time.Sleep(100 * milliSecond)
 			tt.fields.(*cacheAuditor).stopChan <- struct{}{}
-			fmt.Println(incr)
 		})
 	}
 	if incr != 13 {
@@ -134,7 +132,6 @@ func Test_cacheAuditor_Stop(t *testing.T) {
 			tt.fields.Start(nil)
 			tt.fields.Stop()
 			time.Sleep(100 * milliSecond)
-			fmt.Println(incr)
 		})
 	}
 	if incr != 0 {
@@ -158,52 +155,36 @@ func Test_cacheAuditor_CollectErrors(t *testing.T) {
 	}
 	tests := []struct {
 		name     string
-		fields   fields
+		fields   Auditor
 		args     args
-		wantErrs []error
+		wantErrs int // n error
 	}{
-	// TODO: Add test cases.
+		{
+			name:     "test default",
+			fields:   auditDefault,
+			args:     args{10},
+			wantErrs: 0,
+		},
+		{
+			name:     "test light",
+			fields:   auditThirsty,
+			args:     args{4},
+			wantErrs: 4,
+		},
+		{
+			name:     "test thirsty",
+			fields:   auditLight,
+			args:     args{10},
+			wantErrs: 3,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if gotErrs := ch.CollectErrors(tt.args.max); !reflect.DeepEqual(gotErrs, tt.wantErrs) {
-				t.Errorf("cacheAuditor.CollectErrors() = %v, want %v", gotErrs, tt.wantErrs)
-			}
-		})
-	}
-}
-
-func Test_cacheAuditor_Chans(t *testing.T) {
-	type fields struct {
-		delay    time.Duration
-		interval time.Duration
-		job      func(c *cache) error
-		stopChan chan struct{}
-		errChan  chan error
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   chan struct{}
-		want1  chan error
-	}{
-	// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ch := &cacheAuditor{
-				delay:    tt.fields.delay,
-				interval: tt.fields.interval,
-				job:      tt.fields.job,
-				stopChan: tt.fields.stopChan,
-				errChan:  tt.fields.errChan,
-			}
-			got, got1 := ch.Chans()
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("cacheAuditor.Chans() got = %v, want %v", got, tt.want)
-			}
-			if !reflect.DeepEqual(got1, tt.want1) {
-				t.Errorf("cacheAuditor.Chans() got1 = %v, want %v", got1, tt.want1)
+			tt.fields.Start(nil)
+			time.Sleep(100 * milliSecond)
+			tt.fields.Stop()
+			if gotErrs := tt.fields.CollectErrors(tt.args.max); len(gotErrs) != tt.wantErrs {
+				t.Errorf("cacheAuditor.CollectErrors() = %v, want %v", len(gotErrs), tt.wantErrs)
 			}
 		})
 	}

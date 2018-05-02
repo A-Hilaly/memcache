@@ -1,7 +1,6 @@
 package memcache
 
 import (
-	"fmt"
 	"reflect"
 	"sync"
 	"testing"
@@ -9,7 +8,7 @@ import (
 )
 
 func debugCache() CacheStore {
-	return New(50, 10*time.Second, 500*time.Millisecond, 100*time.Millisecond)
+	return NewCacheStore(50, 10*time.Second, 500*time.Millisecond, 100*time.Millisecond)
 }
 
 func Test_cache_haveKey(t *testing.T) {
@@ -224,7 +223,6 @@ func Test_cache_GetItem(t *testing.T) {
 				return
 			}
 			if !(got.Value == tt.want) || (got.lifetime == 0 && !tt.wantErr) {
-				fmt.Println(got.createdAt, got.lifetime)
 				t.Errorf("cache.GetItem() = %v, want %v", got.Value, tt.want)
 			}
 		})
