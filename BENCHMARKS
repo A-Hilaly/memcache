@@ -2,13 +2,13 @@ goos: windows
 goarch: amd64
 pkg: github.com/a-hilaly/memcache
 BenchmarkPutNewValue-4           5000000               331 ns/op
-BenchmarkPutExistingValue-4     20000000                50.7 ns/op
-BenchmarkGetValue-4             20000000                60.7 ns/op
-BenchmarkGetItem-4              20000000                66.1 ns/op
+BenchmarkPutExistingValue-4     20000000                50.9 ns/op
+BenchmarkGetValue-4             20000000                60.9 ns/op
+BenchmarkGetItem-4              20000000                60.9 ns/op
 BenchmarkUpdateExisting-4       20000000                81.2 ns/op
 BenchmarkUpdateNonExisting-4    50000000                24.3 ns/op
 BenchmarkPatch-4                10000000               111 ns/op
 BenchmarkPutDelete-4            10000000               172 ns/op
 BenchmarkDeleteNonExisting-4    50000000                22.2 ns/op
 PASS
-ok      github.com/a-hilaly/memcache    20.047s
+ok      github.com/a-hilaly/memcache    18.750s
