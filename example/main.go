@@ -2,26 +2,22 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/a-hilaly/memcache"
 )
 
-func test() {
-	c := memcache.Default()
-here:
-	c.Put("a", "hey")
-	c.Put("b", "hijack")
-	c.Put("c", "kii")
-	c.Immortalize("a")
-	time.Sleep(500 * time.Millisecond)
-	fmt.Println(c.ListKeys())
-	time.Sleep(500 * time.Millisecond)
-	fmt.Println(c.ListKeys())
-	time.Sleep(500 * time.Millisecond)
-	goto here
+func main() {
+	tain()
 }
 
-func main() {
-	test()
+func tain() {
+	store := memcache.Default()
+	store.Put("my-key", "myvalue")
+	v, _ := store.Get("my-key")
+	fmt.Println(v)
+
+	store.Patch("my-key", struct{ flag, size int }{50, 50})
+	v, _ = store.Get("my-key")
+	fmt.Println(v)
+
 }
