@@ -28,24 +28,47 @@ type cache struct {
 	auditor   Auditor
 }
 
+// Cache store interface
 type CacheStore interface {
+	// returns the main auditor of the store
 	Auditor() Auditor
+	// puts a new value and it tag for specified key
 	Put(key string, value interface{}, tags ...uint16) error
+	// Get key value
 	Get(key string) (interface{}, error)
+	// Get key item
 	GetItem(key string) (Item, error)
+	// Update key value or tags
 	Update(key string, v interface{}, tags ...uint16) error
+	// Patch key
+	// if key dosent exist it will create it
 	Patch(key string, value interface{}, tags ...uint16) error
+	// Delete an item associated with key
 	Delete(key string) error
-	Clear()
+	// List all the items without their keys
 	List() []Item
+	// return cache store map copy
+	Items() map[string]Item
+	// Filter some keys
 	Filter(func(i Item) bool) []Item
+	// Do for each item in store
 	ForEach(func(i Item))
+	// List store keys
 	ListKeys() []string
+	// List store values
 	ListValues() []interface{}
+	// extend item lifetime
 	ExtendLifetime(key string, dur time.Duration) error
+	// set item lifetime to 0 (cannot be deleted)
 	Immortalize(key string) error
+
+	// Clear all the memcache db
+	Clear()
+	// Close the memecache store
+	Close()
 }
 
+// New memcache store
 func NewCacheStore(capacity uint64, defaultLifetime, interval, delay time.Duration) CacheStore {
 	c := &cache{
 		capacity:  capacity,
@@ -53,10 +76,14 @@ func NewCacheStore(capacity uint64, defaultLifetime, interval, delay time.Durati
 		items:     make(map[string]Item, capacity),
 		auditor:   lifetimeAuditor(interval, delay),
 	}
-	c.start()
+	c.auditor.Start(c)
 	return c
 }
 
+// Default memcache store
+// item life time : 180 seconds
+// auditor interval : 30 seconds
+// auditor delay : 15 seconds
 func Default() CacheStore {
 	return NewCacheStore(10, 180*time.Second, 30*time.Second, 15*time.Second)
 }
@@ -65,11 +92,7 @@ func (c *cache) Auditor() Auditor {
 	return c.auditor
 }
 
-func (c *cache) start() {
-	c.auditor.Start(c)
-}
-
-func (c *cache) Stop() {
+func (c *cache) Close() {
 	c.auditor.Stop()
 }
 
@@ -190,6 +213,13 @@ func (c *cache) List() []Item {
 		it = append(it, v)
 	}
 	return it
+}
+
+func (c *cache) Items() map[string]Item {
+	c.mu.Lock()
+	items := c.items
+	c.mu.Unlock()
+	return items
 }
 
 func (c *cache) Filter(f func(i Item) bool) []Item {
