@@ -7,9 +7,10 @@ import (
 )
 
 var (
-	ErrKeyAlreadyExist = errors.New("Key already exists")
-	ErrKeyDoesntExist  = errors.New("Key doesnt exists")
-	ErrNotImplemented  = errors.New("Not implemented")
+	ErrKeyAlreadyExist    = errors.New("Key already exists")
+	ErrKeyDoesntExist     = errors.New("Key doesnt exists")
+	ErrNotImplemented     = errors.New("Not implemented")
+	ErrMaxCapacityReached = errors.New("Reached max capacity")
 )
 
 type Item struct {
@@ -107,8 +108,11 @@ func (c *cache) Put(key string, value interface{}, tags ...uint16) error {
 	if exist := c.haveKey(key); exist {
 		return ErrKeyAlreadyExist
 	}
-
 	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.incr >= c.capacity {
+		return ErrMaxCapacityReached
+	}
 	c.items[key] = Item{
 		createdAt: time.Now(),
 		Value:     value,
@@ -116,7 +120,6 @@ func (c *cache) Put(key string, value interface{}, tags ...uint16) error {
 		lifetime:  c.defaultlt,
 	}
 	c.incr++
-	c.mu.Unlock()
 	return nil
 }
 

@@ -2,13 +2,18 @@ package memcache
 
 import (
 	"reflect"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
 )
 
 func debugCache() CacheStore {
-	return NewCacheStore(50, 10*time.Second, 500*time.Millisecond, 100*time.Millisecond)
+	return NewCacheStore(50, 10*second, 500*milliSecond, 100*milliSecond)
+}
+
+func benchmarkCache() CacheStore {
+	return NewCacheStore(400000, 10*second, 500*milliSecond, 100*milliSecond)
 }
 
 func Test_cache_haveKey(t *testing.T) {
@@ -668,4 +673,86 @@ func Test_cache_Immortalize(t *testing.T) {
 			}
 		})
 	}
+}
+
+var baseKey string = "base"
+var baseValue string = "value"
+
+func BenchmarkPutNewValue(b *testing.B) {
+	// strconv.Itoa benchmark are affecting this benchmark
+	c := benchmarkCache()
+	for i := 0; i < b.N; i++ {
+		_ = c.Put(baseKey+strconv.Itoa(i), i)
+	}
+	c.Close()
+}
+
+func BenchmarkPutExistingValue(b *testing.B) {
+	c := benchmarkCache()
+	for i := 0; i < b.N; i++ {
+		_ = c.Put("ez", i)
+	}
+	c.Close()
+}
+
+func BenchmarkGetValue(b *testing.B) {
+	c := benchmarkCache()
+	c.Put("hello", "world")
+	for i := 0; i < b.N; i++ {
+		_, _ = c.Get("hello")
+	}
+	c.Close()
+}
+
+func BenchmarkGetItem(b *testing.B) {
+	c := benchmarkCache()
+	c.Put("hello", "world")
+	for i := 0; i < b.N; i++ {
+		_, _ = c.GetItem("hello")
+	}
+	c.Close()
+}
+
+func BenchmarkUpdateExisting(b *testing.B) {
+	c := benchmarkCache()
+	c.Put("hello", "world")
+	for i := 0; i < b.N; i++ {
+		_ = c.Update("hello", "hey")
+	}
+	c.Close()
+}
+
+func BenchmarkUpdateNonExisting(b *testing.B) {
+	c := benchmarkCache()
+	for i := 0; i < b.N; i++ {
+		_ = c.Update("hello", "hey")
+	}
+	c.Close()
+}
+
+func BenchmarkPatch(b *testing.B) {
+	c := benchmarkCache()
+	for i := 0; i < b.N; i++ {
+		_ = c.Patch("hello", "value")
+	}
+	c.Close()
+}
+
+func BenchmarkPutDelete(b *testing.B) {
+	c := benchmarkCache()
+
+	for i := 0; i < b.N; i++ {
+		_ = c.Put("hello", 1)
+		_ = c.Delete("hello")
+	}
+	c.Close()
+}
+
+func BenchmarkDeleteNonExisting(b *testing.B) {
+	c := benchmarkCache()
+
+	for i := 0; i < b.N; i++ {
+		_ = c.Delete("hello")
+	}
+	c.Close()
 }

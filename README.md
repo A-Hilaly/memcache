@@ -26,10 +26,17 @@ func main() {
 
 }
  ```
+# Benchmarks
+```shell
+go test -v -bench .
+```
+see [benchmark file](BENCHMARKS)
+
 
  # TODO
 
  - ~~package~~
  - ~~cache audit~~
  - ~~tests~~
- - benchmarks
+ - ~~benchmarks~~
+
