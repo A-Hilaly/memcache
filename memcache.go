@@ -31,8 +31,6 @@ type cache struct {
 
 // Cache store interface
 type CacheStore interface {
-	// returns the main auditor of the store
-	Auditor() Auditor
 	// puts a new value and it tag for specified key
 	Put(key string, value interface{}, tags ...uint16) error
 	// Get key value
@@ -41,8 +39,7 @@ type CacheStore interface {
 	GetItem(key string) (Item, error)
 	// Update key value or tags
 	Update(key string, v interface{}, tags ...uint16) error
-	// Patch key
-	// if key dosent exist it will create it
+	// Patch key if key dosent exist it will create it
 	Patch(key string, value interface{}, tags ...uint16) error
 	// Delete an item associated with key
 	Delete(key string) error
@@ -62,7 +59,6 @@ type CacheStore interface {
 	ExtendLifetime(key string, dur time.Duration) error
 	// set item lifetime to 0 (cannot be deleted)
 	Immortalize(key string) error
-
 	// Clear all the memcache db
 	Clear()
 	// Close the memecache store
@@ -176,14 +172,7 @@ func (c *cache) Patch(key string, value interface{}, tags ...uint16) error {
 	if c.haveKey(key) {
 		return c.Update(key, value, tags...)
 	}
-	c.mu.Lock()
-	c.items[key] = Item{
-		createdAt: time.Now(),
-		Value:     value,
-		Tags:      tags,
-	}
-	c.mu.Unlock()
-	return nil
+	return c.Put(key, value, tags...)
 }
 
 func (c *cache) Delete(key string) error {
