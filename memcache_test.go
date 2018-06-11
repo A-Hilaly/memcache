@@ -9,11 +9,11 @@ import (
 )
 
 func debugCache() CacheStore {
-	return NewCacheStore(50, 10*second, 500*milliSecond, 100*milliSecond)
+	return New(50, 10*second, 500*milliSecond, 100*milliSecond)
 }
 
 func benchmarkCache() CacheStore {
-	return NewCacheStore(400000, 10*second, 500*milliSecond, 100*milliSecond)
+	return New(400000, 10*second, 500*milliSecond, 100*milliSecond)
 }
 
 func Test_cache_haveKey(t *testing.T) {

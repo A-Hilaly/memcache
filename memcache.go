@@ -66,7 +66,7 @@ type CacheStore interface {
 }
 
 // New memcache store
-func NewCacheStore(capacity uint64, defaultLifetime, interval, delay time.Duration) CacheStore {
+func New(capacity uint64, defaultLifetime, interval, delay time.Duration) CacheStore {
 	c := &cache{
 		capacity:  capacity,
 		defaultlt: defaultLifetime,
@@ -82,7 +82,7 @@ func NewCacheStore(capacity uint64, defaultLifetime, interval, delay time.Durati
 // auditor interval : 30 seconds
 // auditor delay : 15 seconds
 func Default() CacheStore {
-	return NewCacheStore(10, 180*time.Second, 30*time.Second, 15*time.Second)
+	return New(10, 180*time.Second, 30*time.Second, 15*time.Second)
 }
 
 func (c *cache) Auditor() Auditor {
