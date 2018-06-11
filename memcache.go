@@ -29,6 +29,8 @@ type cache struct {
 	auditor   Auditor
 }
 
+var _ CacheStore = &cache{}
+
 // Cache store interface
 type CacheStore interface {
 	// puts a new value and it tag for specified key
@@ -66,7 +68,7 @@ type CacheStore interface {
 }
 
 // New memcache store
-func New(capacity uint64, defaultLifetime, interval, delay time.Duration) CacheStore {
+func New(capacity uint64, defaultLifetime, interval, delay time.Duration) *cache {
 	c := &cache{
 		capacity:  capacity,
 		defaultlt: defaultLifetime,
@@ -81,7 +83,7 @@ func New(capacity uint64, defaultLifetime, interval, delay time.Duration) CacheS
 // item life time : 180 seconds
 // auditor interval : 30 seconds
 // auditor delay : 15 seconds
-func Default() CacheStore {
+func Default() *cache {
 	return New(10, 180*time.Second, 30*time.Second, 15*time.Second)
 }
 
