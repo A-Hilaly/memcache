@@ -7,17 +7,20 @@ import (
 )
 
 var (
-	ErrKeyAlreadyExist    = errors.New("Key already exists")
-	ErrKeyDoesntExist     = errors.New("Key doesnt exists")
-	ErrNotImplemented     = errors.New("Not implemented")
-	ErrMaxCapacityReached = errors.New("Reached max capacity")
+	errKeyAlreadyExist    = errors.New("Key already exists")
+	errKeyDoesntExist     = errors.New("Key doesnt exists")
+	errNotImplemented     = errors.New("Not implemented")
+	errMaxCapacityReached = errors.New("Reached max capacity")
 )
 
+// Item is cache store elements
 type Item struct {
+	// Default
 	createdAt time.Time
 	lifetime  time.Duration
-	Value     interface{}
-	Tags      []uint16
+	// Values
+	Value interface{}
+	Tags  []uint16
 }
 
 type cache struct {
@@ -29,10 +32,12 @@ type cache struct {
 	auditor   Auditor
 }
 
-var _ CacheStore = &cache{}
+// Ensuring that cache implement the Cache
+// interface
+var _ Cache = &cache{}
 
 // Cache store interface
-type CacheStore interface {
+type Cache interface {
 	// puts a new value and it tag for specified key
 	Put(key string, value interface{}, tags ...uint16) error
 	// Get key value
@@ -87,14 +92,18 @@ func Default() *cache {
 	return New(10, 180*time.Second, 30*time.Second, 15*time.Second)
 }
 
+// Auditor
 func (c *cache) Auditor() Auditor {
 	return c.auditor
 }
 
+// Close cache store
 func (c *cache) Close() {
 	c.auditor.Stop()
 }
 
+// haveKey return true if key exist
+// false if it doesnt
 func (c *cache) haveKey(key string) bool {
 	c.mu.Lock()
 	_, exist := c.items[key]
@@ -102,14 +111,17 @@ func (c *cache) haveKey(key string) bool {
 	return exist
 }
 
+// Put a key with a value and list of tags
+// return an error if element already exist
+// or cache store is Full
 func (c *cache) Put(key string, value interface{}, tags ...uint16) error {
 	if exist := c.haveKey(key); exist {
-		return ErrKeyAlreadyExist
+		return errKeyAlreadyExist
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.incr >= c.capacity {
-		return ErrMaxCapacityReached
+		return errMaxCapacityReached
 	}
 	c.items[key] = Item{
 		createdAt: time.Now(),
@@ -121,9 +133,11 @@ func (c *cache) Put(key string, value interface{}, tags ...uint16) error {
 	return nil
 }
 
+// Get a key item value if item exists exists,
+// will return error if not
 func (c *cache) Get(key string) (interface{}, error) {
 	if exist := c.haveKey(key); !exist {
-		return nil, ErrKeyDoesntExist
+		return nil, errKeyDoesntExist
 	}
 
 	c.mu.Lock()
@@ -132,9 +146,11 @@ func (c *cache) Get(key string) (interface{}, error) {
 	return v, nil
 }
 
+// GetItem key with key, will return error
+// if item doesnt exist
 func (c *cache) GetItem(key string) (Item, error) {
 	if exist := c.haveKey(key); !exist {
-		return Item{}, ErrKeyDoesntExist
+		return Item{}, errKeyDoesntExist
 	}
 
 	c.mu.Lock()
@@ -143,9 +159,11 @@ func (c *cache) GetItem(key string) (Item, error) {
 	return v, nil
 }
 
+// Update try to to update an existing element
+// within the memcache
 func (c *cache) Update(key string, value interface{}, tags ...uint16) error {
 	if exist := c.haveKey(key); !exist {
-		return ErrKeyDoesntExist
+		return errKeyDoesntExist
 	}
 
 	c.mu.Lock()
@@ -170,6 +188,9 @@ func (c *cache) Update(key string, value interface{}, tags ...uint16) error {
 	return nil
 }
 
+// Patch: see https://en.wikipedia.org/wiki/Patch_verb
+// Will try to create the item if he doesnt exist
+// Else it will update the existing item
 func (c *cache) Patch(key string, value interface{}, tags ...uint16) error {
 	if c.haveKey(key) {
 		return c.Update(key, value, tags...)
@@ -177,9 +198,11 @@ func (c *cache) Patch(key string, value interface{}, tags ...uint16) error {
 	return c.Put(key, value, tags...)
 }
 
+// Delete an item with it key value
+// return error if item doesnt exist
 func (c *cache) Delete(key string) error {
 	if exist := c.haveKey(key); !exist {
-		return ErrKeyDoesntExist
+		return errKeyDoesntExist
 	}
 	c.mu.Lock()
 	delete(c.items, key)
@@ -188,6 +211,8 @@ func (c *cache) Delete(key string) error {
 	return nil
 }
 
+// Clear clear all cache by reinitializing
+// items map
 func (c *cache) Clear() {
 	items := make(map[string]Item, c.capacity)
 	c.mu.Lock()
@@ -196,6 +221,7 @@ func (c *cache) Clear() {
 	c.mu.Unlock()
 }
 
+// List eturn a list containing all the items
 func (c *cache) List() []Item {
 	c.mu.Lock()
 	items := c.items
@@ -209,6 +235,8 @@ func (c *cache) List() []Item {
 	return it
 }
 
+// Items return the original map of items
+// strings -> Item
 func (c *cache) Items() map[string]Item {
 	c.mu.Lock()
 	items := c.items
@@ -216,6 +244,8 @@ func (c *cache) Items() map[string]Item {
 	return items
 }
 
+// Return a list of items that satisfy the
+// filter f
 func (c *cache) Filter(f func(i Item) bool) []Item {
 	c.mu.Lock()
 	items := c.items
@@ -231,6 +261,7 @@ func (c *cache) Filter(f func(i Item) bool) []Item {
 	return it
 }
 
+// ForEach apply for each element f
 func (c *cache) ForEach(f func(i Item)) {
 	c.mu.Lock()
 	items := c.items
@@ -240,6 +271,8 @@ func (c *cache) ForEach(f func(i Item)) {
 	}
 }
 
+// ListValues list only the values of items
+// in cache items map
 func (c *cache) ListValues() []interface{} {
 	c.mu.Lock()
 	size := c.incr
@@ -254,6 +287,8 @@ func (c *cache) ListValues() []interface{} {
 	return array
 }
 
+// ListKeys list only the keys of items
+// in cache item map
 func (c *cache) ListKeys() []string {
 	c.mu.Lock()
 	items := c.items
@@ -268,6 +303,8 @@ func (c *cache) ListKeys() []string {
 	return array
 }
 
+// ExtendLifetime will add lifetime duration
+// to the wanted object
 func (c *cache) ExtendLifetime(key string, dur time.Duration) error {
 	item, err := c.GetItem(key)
 	if err != nil {
@@ -281,6 +318,8 @@ func (c *cache) ExtendLifetime(key string, dur time.Duration) error {
 	return nil
 }
 
+// Imorialize set the lifetime key to 0
+// Which always ignored by cache auditor
 func (c *cache) Immortalize(key string) error {
 	item, err := c.GetItem(key)
 	if err != nil {

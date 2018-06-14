@@ -4,6 +4,8 @@ import (
 	"time"
 )
 
+// Auditor janitor, doctor is a multi purpose goroutine
+// that handles Item expirations and errors
 type Auditor interface {
 	Start(c *cache)
 	Stop()
@@ -41,10 +43,13 @@ func lifetimeAuditor(interval time.Duration, delay time.Duration) *cacheAuditor 
 	}
 }
 
+// Start the cache auditor
 func (ch *cacheAuditor) Start(c *cache) {
 	stop := make(chan struct{})
 	errchan := make(chan error, 100)
+	// Time ticker
 	ticker := time.NewTicker(ch.interval)
+	// go goroutine
 	go func() {
 		for {
 			select {
@@ -65,10 +70,12 @@ func (ch *cacheAuditor) Start(c *cache) {
 	ch.stopChan = stop
 }
 
+// Pend stop signal to cacheAuditor
 func (ch *cacheAuditor) Stop() {
 	ch.stopChan <- struct{}{}
 }
 
+// CollectErrors all the errors
 func (ch *cacheAuditor) CollectErrors(max int) (errs []error) {
 	errs = make([]error, 0, max)
 	func() {
@@ -90,6 +97,7 @@ func (ch *cacheAuditor) CollectErrors(max int) (errs []error) {
 	return errs
 }
 
+// Chans return stopChan and errChan
 func (ch *cacheAuditor) Chans() (chan struct{}, chan error) {
 	return ch.stopChan, ch.errChan
 }
