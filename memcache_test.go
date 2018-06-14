@@ -8,11 +8,11 @@ import (
 	"time"
 )
 
-func debugCache() CacheStore {
+func debugCache() Cache {
 	return New(50, 10*second, 500*milliSecond, 100*milliSecond)
 }
 
-func benchmarkCache() CacheStore {
+func benchmarkCache() Cache {
 	return New(400000, 10*second, 500*milliSecond, 100*milliSecond)
 }
 
@@ -78,7 +78,7 @@ func Test_cache_PutGet(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		fields  CacheStore
+		fields  Cache
 		args    args
 		wantErr bool
 	}{
@@ -131,7 +131,7 @@ func Test_cache_Get(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		fields  CacheStore
+		fields  Cache
 		args    args
 		want    interface{}
 		wantErr bool
@@ -187,7 +187,7 @@ func Test_cache_GetItem(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		fields  CacheStore
+		fields  Cache
 		args    args
 		want    interface{}
 		wantErr bool
@@ -244,7 +244,7 @@ func Test_cache_Update(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		fields  CacheStore
+		fields  Cache
 		args    args
 		want    interface{}
 		wantErr bool
@@ -304,7 +304,7 @@ func Test_cache_Patch(t *testing.T) {
 	}
 	tests := []struct {
 		name   string
-		fields CacheStore
+		fields Cache
 		args   args
 	}{
 		{
@@ -346,7 +346,7 @@ func Test_cache_Delete(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		fields  CacheStore
+		fields  Cache
 		args    args
 		wantErr bool
 	}{
@@ -432,7 +432,7 @@ func Test_cache_List(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		fields CacheStore
+		fields Cache
 		want   []Item
 	}{
 		{
@@ -462,7 +462,7 @@ func Test_cache_Filter(t *testing.T) {
 	}
 	tests := []struct {
 		name   string
-		fields CacheStore
+		fields Cache
 		args   args
 		want   []Item
 	}{
@@ -499,7 +499,7 @@ func Test_cache_ForEach(t *testing.T) {
 	}
 	tests := []struct {
 		name   string
-		fields CacheStore
+		fields Cache
 		args   args
 	}{
 		{
@@ -529,7 +529,7 @@ func Test_cache_ListValues(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		fields CacheStore
+		fields Cache
 		want   []interface{}
 	}{
 		{
@@ -560,7 +560,7 @@ func Test_cache_ListKeys(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		fields CacheStore
+		fields Cache
 		want   []string
 	}{
 		{
@@ -594,7 +594,7 @@ func Test_cache_ExtendLifetime(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		fields  CacheStore
+		fields  Cache
 		args    args
 		wantErr bool
 	}{
@@ -644,7 +644,7 @@ func Test_cache_Immortalize(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		fields  CacheStore
+		fields  Cache
 		args    args
 		wantErr bool
 	}{
