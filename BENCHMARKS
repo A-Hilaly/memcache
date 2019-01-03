@@ -1,14 +1,17 @@
-goos: windows
+goos: darwin
 goarch: amd64
 pkg: github.com/a-hilaly/memcache
-BenchmarkPutNewValue-4           5000000               331 ns/op
-BenchmarkPutExistingValue-4     20000000                50.9 ns/op
-BenchmarkGetValue-4             20000000                60.9 ns/op
-BenchmarkGetItem-4              20000000                60.9 ns/op
-BenchmarkUpdateExisting-4       20000000                81.2 ns/op
-BenchmarkUpdateNonExisting-4    50000000                24.3 ns/op
-BenchmarkPatch-4                10000000               111 ns/op
-BenchmarkPutDelete-4            10000000               172 ns/op
-BenchmarkDeleteNonExisting-4    50000000                22.2 ns/op
+BenchmarkMemCachePutPlat-8               1000000              1176 ns/op
+BenchmarkMemCachePutPreAlloc-8           2000000               677 ns/op
+BenchmarkMemCacheGetExist-8             10000000               121 ns/op
+BenchmarkMemCacheGetNonExist-8          20000000                66.4 ns/op
+BenchmarkMemCacheDeleteExist-8           3000000               435 ns/op
+BenchmarkMemCacheDeleteNonExist-8       20000000               108 ns/op
+BenchmarkMemStorePutPlat-8              10000000               238 ns/op
+BenchmarkMemStorePutPreAlloc-8          10000000               254 ns/op
+BenchmarkMemStoreGetExist-8             20000000                59.6 ns/op
+BenchmarkMemStoreGetNonExist-8          20000000                58.6 ns/op
+BenchmarkMemStoreDeleteExist-8          10000000               241 ns/op
+BenchmarkMemStoreDeleteNonExist-8       20000000                62.7 ns/op
 PASS
-ok      github.com/a-hilaly/memcache    18.750s
+ok      github.com/a-hilaly/memcache    34.516s
