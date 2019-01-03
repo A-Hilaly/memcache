@@ -1,5 +1,5 @@
 package memcache
 
 /**
-Memcache, a small implementation of memcache in Go.
+  Zero dependencies memcache key|value store library. It supports multi threaded programs and offer an easy to use auditing properties.
 */
